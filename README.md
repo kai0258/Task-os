@@ -1,10 +1,32 @@
 # Task OS
 
-A lightweight, file-based task orchestration system for AI coding agents.
+A lightweight task operating system for AI agents.
 
-Routes tasks to the right worker, validates results with deterministic checks, and recovers from crashes automatically.
+Task OS provides deterministic task routing, execution tracking, validation, and recovery for long-running agent workflows.
 
-**Task Spec → Renderer → Worker → Acceptance → Registry.**
+Instead of relying on chat history, Task OS stores task state explicitly and allows agents to resume work reliably across sessions.
+
+---
+
+## Why Task OS
+
+AI agents are increasingly capable of performing complex work, but many workflows still depend on fragile chat sessions.
+
+Task OS introduces a file-based execution model:
+
+```
+Task → Routing → Execution → Validation → Registry
+```
+
+This approach provides:
+
+* Explicit task lifecycle management
+* Crash recovery
+* Resume support
+* Deterministic acceptance checks
+* Persistent execution history
+
+---
 
 ## Install
 
@@ -13,50 +35,141 @@ git clone https://github.com/kai0258/Task-os.git
 cd Task-os/task-os
 ```
 
-## Quick start
+## Quick Start
 
 ```bash
 # Submit a task
 python3 dispatcher.py submit --type translate --title "Translate README" \
   --input ./README.md --output ./README_zh.md
 
-# Run
+# Run all pending tasks
 python3 dispatcher.py run
 
 # Check status
 python3 dispatcher.py status
 
-# Retry
+# Retry a failed task
 python3 dispatcher.py retry <task_id>
 ```
 
-## How it works
+---
+
+## Core Architecture
 
 ```
-Submit → Capability Matrix → Renderer → Worker → Hard Acceptance → Registry
+Submit
+  ↓
+Capability Matrix
+  ↓
+Renderer
+  ↓
+Worker
+  ↓
+Acceptance
+  ↓
+Registry
 ```
 
-- **Capability Matrix** routes by task_type (translate → Claude, pdf → MinerU, audio → Whisper)
-- **Hard Acceptance** validates with deterministic checks (file exists, min lines, encoding, keywords)
-- **Crash Recovery** auto-recovers stale tasks and interrupted writes
-- **Retry via Resume** resumes failed sessions with `--resume <session_id>`
+### Capability Matrix
 
-## Workers
+Routes tasks to the most appropriate worker.
 
-| Worker | Task types | How |
-|--------|-----------|-----|
-| Claude Code | translate, summarize, code | `claude -p "..." --output-format json` |
-| MinerU | pdf_to_markdown | Cloud API (`MINERU_API_KEY`) |
-| Whisper | transcribe | Local CLI |
+* Translation → Claude Code
+* PDF extraction → MinerU
+* Audio transcription → Whisper
+* Code generation → Claude Code
+
+### Renderer
+
+Converts a Task Spec into a worker-specific command. Changing workers doesn't require changing specs.
+
+### Hard Acceptance
+
+Outputs must pass deterministic checks before completion:
+
+* File existence
+* Minimum content requirements (lines, bytes)
+* Encoding validation (UTF-8)
+* Keyword validation
+* Compression ratio (output-to-input sanity)
+
+### Crash Recovery
+
+Automatically recovers interrupted executions and stale task states on startup:
+
+* Recovers `.tmp` registry files from interrupted atomic writes
+* Marks stale `doing` tasks (> 1 hour) as `failed`
+* Re-validates `review` tasks whose output may now exist
+* Marks `done` tasks with missing output as `failed`
+
+### Resume Support
+
+Failed sessions can continue from the last known execution state via `--resume <session_id>`.
+
+---
+
+## Supported Workers
+
+| Worker      | Purpose                    |
+|-------------|----------------------------|
+| Claude Code | Coding and knowledge tasks |
+| MinerU      | PDF extraction (cloud API) |
+| Whisper     | Speech transcription (local CLI) |
+
+Additional workers can be added through the worker interface in `capability_matrix.py`.
+
+---
+
+## Known Pitfalls
+
+These are real issues encountered during development. Read before using in production.
+
+1. **`TaskSpec.create()` ≠ `Registry.register()`** — create only saves the spec file. You must call `submit()` to appear in the registry.
+
+2. **Atomic writes must use `os.replace()`** — writing directly with `open("w")` corrupts on crash. Always: write to `.tmp` → `fsync` → `os.replace()`.
+
+3. **`subprocess.run` is blocking** — one task blocks the entire dispatcher. 100 tasks serial ≈ 55 minutes.
+
+4. **MinerU is a cloud API** — requires `MINERU_API_KEY` environment variable.
+
+5. **Timeout but file already written** — Claude may finish writing after subprocess timeout. Check output file before marking as failed.
+
+6. **BOM prefix breaks frontmatter detection** — Windows editors may save with UTF-8 BOM. Use `utf-8-sig` encoding and `lstrip('\ufeff')` before checking for `---`.
+
+---
+
+## Design Goals
+
+Task OS is designed around four principles:
+
+1. **Explicit state over chat memory** — task state lives in files, not in context windows
+2. **Deterministic validation over subjective evaluation** — hard checks, not LLM self-assessment
+3. **Recovery over restart** — crash recovery and resume, not "run it again"
+4. **Reproducible workflows over one-off execution** — same spec, same result
+
+---
 
 ## Documentation
 
-Full docs in [task-os/](task-os/):
+* [SKILL.md](task-os/SKILL.md) — Full system reference
+* [docs/ARCHITECTURE.md](task-os/docs/ARCHITECTURE.md) — Design overview
+* [docs/DECISIONS.md](task-os/docs/DECISIONS.md) — Engineering rationale
+* [docs/WORKERS.md](task-os/docs/WORKERS.md) — Worker development guide
+* [docs/OPERATIONS.md](task-os/docs/OPERATIONS.md) — Operations guide
+* [docs/ROADMAP.md](task-os/docs/ROADMAP.md) — Future plans
 
-- [SKILL.md](task-os/SKILL.md) — Complete reference
-- [docs/ARCHITECTURE.md](task-os/docs/ARCHITECTURE.md) — Architecture
-- [docs/DECISIONS.md](task-os/docs/DECISIONS.md) — Design decisions
-- [docs/WORKERS.md](task-os/docs/WORKERS.md) — Worker development guide
+---
+
+## Intended Use Cases
+
+* AI-assisted software development
+* Research workflows
+* Document processing
+* Translation pipelines
+* Multi-step automation
+* Long-running agent tasks
+
+---
 
 ## License
 
