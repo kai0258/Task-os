@@ -2,7 +2,7 @@
 
 A lightweight task operating system for AI agents.
 
-Task OS provides deterministic task routing, execution tracking, validation, and recovery for long-running agent workflows.
+Task OS provides deterministic task routing, execution tracking, validation, and recovery for long-running agent workflows. It also includes an orchestration methodology for coordinating multiple agents in parallel.
 
 Instead of relying on chat history, Task OS stores task state explicitly and allows agents to resume work reliably across sessions.
 
@@ -138,6 +138,24 @@ These are real issues encountered during development. Read before using in produ
 
 ---
 
+---
+
+## Orchestrator Framework
+
+Task OS includes a lightweight orchestration methodology for coordinating multiple AI agents in parallel.
+
+The framework defines:
+
+* Task decomposition
+* Worker assignment
+* Shared task logs (Task_Log.md)
+* Context handoff (Handoff_Prompt.txt)
+* Failure recovery (partial retry)
+
+Unlike fully autonomous orchestration systems, the Task OS orchestrator follows a human-supervised execution model designed for Claude Code, Hermes, Codex, and terminal-based agent workflows.
+
+See: [`Orchestrator/`](Orchestrator/)
+
 ## Design Goals
 
 Task OS is designed around four principles:
@@ -157,6 +175,8 @@ Task OS is designed around four principles:
 * [docs/WORKERS.md](task-os/docs/WORKERS.md) — Worker development guide
 * [docs/OPERATIONS.md](task-os/docs/OPERATIONS.md) — Operations guide
 * [docs/ROADMAP.md](task-os/docs/ROADMAP.md) — Future plans
+* [Orchestrator/README.md](Orchestrator/README.md) — Orchestration framework
+* [Orchestrator/SKILL.md](Orchestrator/SKILL.md) — Full orchestration methodology
 
 ---
 
