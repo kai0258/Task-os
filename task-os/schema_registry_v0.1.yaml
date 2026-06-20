@@ -1,0 +1,37 @@
+# Registry Schema v0.1
+#
+# 所有任务状态记录在一个文件里：tasks/registry/registry.yaml
+# 每次状态变更时整个文件重写（v0.1简化方案）。
+#
+# 状态机：
+#   todo → doing → review → done
+#                      ↘ failed → (retry) → doing
+#                                ↘ escalated
+
+# registry.yaml 结构示例：
+
+version: "0.1"
+tasks:
+  t_001:
+    task_type: translate
+    title: "翻译《XX》第5章"
+    status: done                  # todo | doing | review | done | failed | escalated
+    worker: claude-code           # 实际使用的Worker
+    session_id: "abc123"          # Claude Code session id（用于resume）
+    spec_path: tasks/specs/t_001.yaml
+    output_path: /path/to/output.md
+
+    created_at: "2026-06-15T22:00:00"
+    started_at: "2026-06-15T22:01:00"
+    completed_at: "2026-06-15T22:15:00"
+
+    retry_count: 0
+    max_retries: 3
+
+    acceptance:
+      hard_pass: true
+      hard_failures: []           # 未通过的检查项
+      soft_scores: {}             # v0.1不实现
+      verdict: accepted           # accepted | rejected | pending
+
+    error: null                   # 错误信息（失败时填写）

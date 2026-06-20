@@ -1,0 +1,39 @@
+# Task Spec Schema v0.1
+#
+# 每个任务一个YAML文件，放在 tasks/specs/ 下。
+# 创建后不可变（除了 dispatcher 自动填入的 task_id）。
+#
+# 示例文件：tasks/specs/t_001.yaml
+
+task_id: t_001                    # 自动生成，唯一标识
+task_type: translate              # 任务类型：translate | summarize | transcribe | ocr | refactor | custom
+title: "翻译《XX》第5章"           # 人类可读标题
+
+input:                            # 输入
+  source: /path/to/input.md       # 主输入文件或目录
+  reference: /path/to/source.md   # 参考文件（如原文，可选）
+
+output:                           # 输出
+  target: /path/to/output.md      # 主输出文件
+
+requirements:                     # 任务要求（自然语言，注入 Worker prompt）
+  - "翻译为简体中文"
+  - "保留所有脚注和引用"
+  - "人名地名不翻译"
+
+acceptance:                       # 验收标准
+  hard:                           # 硬性要求，不过必退
+    - check: file_exists          # 文件存在且非空
+    - check: min_lines
+      value: 50                   # 最少50行
+    - check: max_lines
+      value: 5000                 # 最多5000行
+    - check: min_bytes
+      value: 1000                 # 最少1000字节
+    - check: contains_all         # 必须包含以下关键词
+      values: ["第5章", "注释"]
+    - check: encoding
+      value: "utf-8"              # 文件编码
+
+worker_hint: claude               # 可选：建议使用的Worker。省略则由Dispatcher决定。
+depends_on: []                    # 可选：前置任务ID列表。v0.1不实现依赖执行，仅记录。
